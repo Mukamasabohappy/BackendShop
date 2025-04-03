@@ -4,45 +4,51 @@ const Cloth = require("../models/Cloth");
 
 exports.createOrder = async (req, res) => {
     try {
+        if (!req.user || !req.user.userId) {
+            return res.status(400).json({ error: "User not authenticated" });
+        }
+        
         const { items } = req.body;
         let totalPrice = 0;
 
         // Loop over the items array to calculate totalPrice
         for (let item of items) {
-            // Convert clothId to ObjectId to ensure proper lookup in MongoDB
             const clothId = mongoose.Types.ObjectId(item.clothId);  // Convert clothId to ObjectId
             
-            // Find the cloth by ObjectId
             const cloth = await Cloth.findById(clothId);
-
-            // If the cloth doesn't exist, return an error
             if (!cloth) {
                 return res.status(404).json({ error: `Cloth with ID ${item.clothId} not found` });
             }
 
-            // Add to the total price based on quantity
             totalPrice += cloth.price * item.quantity;
         }
 
-        // Create a new order
         const newOrder = new Order({
-            userId: req.user.userId,  // Assuming the userId comes from authenticated user
+            userId: req.user.userId,
             items,
             totalPrice
         });
 
-        // Save the new order to the database
         await newOrder.save();
 
-        // Respond with a success message and the created order
         res.status(201).json({
             message: "Order created successfully",
             order: newOrder
         });
     } catch (error) {
-        console.error(error);  // Log error for debugging
+        console.error(error);
         res.status(500).json({ error: "Failed to create order" });
     }
+};
+
+// Get all orders from database
+exports.getOrders = async (req, res) => {
+  try {
+    const orders = await Order.find(); // Fetch all orders
+    res.status(200).json(orders); // Respond with the orders
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error' });
+  }
 };
 
 
@@ -89,5 +95,13 @@ exports.deleteOrder = async (req, res) => {
         res.json({ message: "Order deleted successfully" });
     } catch (error) {
         res.status(500).json({ error: "Failed to delete order" });
+    }
+};
+exports.getAllOrders = async (req, res) => {
+    try {
+        const orders = await Order.find().populate("items.clothId", "name price userId status totalPrice");
+        res.json(orders);
+    } catch (error) {
+        res.status(500).json({ error: "Failed to fetch orders" });
     }
 };

@@ -8,6 +8,9 @@ const authMiddleware = (req, res, next) => {
     }
 
     try {
+        // Log token to ensure it's passed correctly
+        console.log("Token received: ", token);
+
         const decoded = jwt.verify(token.split(" ")[1], process.env.JWT_SECRET);
         req.user = decoded; // Attach user data to the request
         next();
